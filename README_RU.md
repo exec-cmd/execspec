@@ -19,7 +19,9 @@
 - **Приватно по умолчанию.** В `spec/` лежат намерения: планы, мнения, открытые вопросы. `xspec init` убирает папку из git.
 - **Номера.** Один счётчик на все типы: `xspec start 7`, `xspec done 7`, `--with 7,9`.
 - **Проверяемые требования.** У фич требования записаны в нотации EARS (`WHEN … THE SYSTEM SHALL …`), а каждая задача ссылается на своё требование (`(R1)`). У багов три поведения: текущее, ожидаемое и *то, что не должно сломаться*.
-- **Ворота.** Метки `[?: вопрос]` не дают сделать `start`, неотмеченные задачи не дают сделать `done`.
+- **Вы одобряете, агент строит.** Метки `[?: вопрос]` не дают одобрить спеку. `xspec approve` запускаете только вы, и любая правка после него сбрасывает одобрение. Неотмеченные задачи и упавшие команды `Verify:` не дают сделать `done`.
+- **Спеки нужного размера.** Kickoff на весь проект, `--depth light` для мелкой работы, один update с частями, когда задач много сразу.
+- **Всегда понятно, что дальше.** `xspec next`, `xspec questions` и генерируемый `ROADMAP.md` с историей.
 - **Пакеты.** *update* собирает фичи и issues, *fix* — issues и мелкие баги. Когда пакет закрывается, закрывается и всё, что в него входит.
 - **Чистая история.** `done` записывает в файл коммит и переносит файл в `spec/archive/`.
 - **Навык для агентов.** `xspec install global` ставит его для Claude Code (`~/.claude/skills`) и других агентов (`~/.agents/skills`).
@@ -50,13 +52,15 @@ xspec install global     # ~/.claude/skills/execspec и ~/.agents/skills/execspe
 ## Быстрый старт
 
 ```sh
-xspec init                                  # spec/ + строка в .gitignore
-xspec new feature "Login form"              # spec/features/001-login-form.md
-xspec new issue "Crash on save"             # spec/issues/002-crash-on-save.md
-xspec new update v0.2 --with 1,2            # spec/updates/003-v0-2/{update,design}.md
-xspec list
-xspec start 3                               # откажет, пока есть метки [?: …]
-xspec done 3                                # откажет, пока есть неотмеченные задачи
+xspec init                                  # spec/, kickoff, строка в .gitignore
+xspec new feature "Login form"              # spec/features/002-login-form.md
+xspec new issue "Crash on save"             # spec/issues/003-crash-on-save.md
+xspec new update v0.2 --with 2,3            # spec/updates/004-v0-2/{update,design}.md
+xspec questions                             # что ждёт вашего ответа
+xspec approve 4                             # только вы; откажет, пока есть метки [?: …]
+xspec start 4
+xspec next                                  # следующая задача
+xspec done 4                                # откажет, если задачи не отмечены или Verify упал
 xspec check                                 # код выхода 1 при любой проблеме
 ```
 
@@ -65,21 +69,22 @@ xspec check                                 # код выхода 1 при лю�
 ```text
 $ xspec list
 NUM  TYPE     STATUS  [?]  TASKS  TITLE
-001  feature  open    0    0/2    Login form
-002  issue    open    0    0/2    Crash on save
-003  update   open    0    0/1    v0.2
+002  feature  open    0    0/2    Login form
+003  issue    open    0    0/2    Crash on save
+004  update   open    0    0/1    v0.2
 
-$ xspec done 3
-003 done   v0.2 -> spec/archive/updates/003-v0-2
-001 done   Login form -> spec/archive/features/001-login-form.md
-002 done   Crash on save -> spec/archive/issues/002-crash-on-save.md
+$ xspec done 4
+verify: go test ./...
+004 done   v0.2 -> spec/archive/updates/004-v0-2
+002 done   Login form -> spec/archive/features/002-login-form.md
+003 done   Crash on save -> spec/archive/issues/003-crash-on-save.md
 ```
 
 Так выглядит новый файл фичи. Агент его заполняет, вы одобряете, и только после этого пишется код:
 
 ```markdown
 status: open
-# 001 Login form
+# 002 Login form
 
 ## Why
 [?: the problem, and who gets what when it is solved]
@@ -92,6 +97,8 @@ status: open
 
 ## Tasks
 - [ ] T1 [?: task] (R1)
+
+Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
 ```
 
 ## Документация
