@@ -105,6 +105,24 @@ func Init(root string) ([]string, error) {
 		created = append(created, p)
 	}
 
+	items, err := Scan(root)
+	if err != nil {
+		return created, err
+	}
+	if len(items) == 0 {
+		p := filepath.Join(root, Dir, "plans", "001-kickoff.md")
+		if err := writeNew(p, templates["kickoff"], nil); err != nil {
+			return created, err
+		}
+		created = append(created, p)
+	}
+	if _, err := os.Stat(filepath.Join(root, Dir, RoadmapFile)); os.IsNotExist(err) {
+		created = append(created, filepath.Join(root, Dir, RoadmapFile))
+	}
+	if err := WriteRoadmap(root); err != nil {
+		return created, err
+	}
+
 	added, err := ensureIgnored(root)
 	if err != nil {
 		return created, err
