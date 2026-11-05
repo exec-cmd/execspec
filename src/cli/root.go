@@ -8,12 +8,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version is set at build time: -ldflags "-X github.com/exec-cmd/execspec/src/cli.version=v0.3.0".
+var version = "dev"
+
 var rootCmd = &cobra.Command{
 	Use:   "xspec",
 	Short: "Spec-driven development in a private spec/ directory",
 	Long: "xspec keeps intent in a private, git-ignored spec/ directory: numbered features,\n" +
 		"issues, updates, fixes and plans that people and AI agents share as plain Markdown.",
 	SilenceUsage: true,
+	Version:      version,
 }
 
 func Execute() {

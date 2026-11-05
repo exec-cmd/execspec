@@ -50,7 +50,7 @@ jobs:
           mkdir -p dist
           go build \
             -trimpath \
-            -ldflags="-s -w" \
+            -ldflags="-s -w -X github.com/exec-cmd/execspec/src/cli.version=${GITHUB_REF_NAME}" \
             -o "dist/xspec-${GOOS}-${GOARCH}${{ matrix.ext }}" \
             ./src/xspec
 

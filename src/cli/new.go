@@ -21,6 +21,7 @@ var newCmd = &cobra.Command{
 		"Types: feature, issue, update, fix, plan (numbered, with status), note, analysis.\n" +
 		"An update or fix run in a terminal without --with asks which items to include.",
 	Example: "  xspec new feature \"Login form\"\n" +
+		"  xspec new feature \"Dark mode\" --depth light\n" +
 		"  xspec new update v0.2 --with 7,9\n" +
 		"  xspec new fix typos --bug \"typo in --help\" --bug \"wrong exit code\"",
 	Args: cobra.MinimumNArgs(2),
@@ -81,6 +82,7 @@ func init() {
 	newCmd.Flags().IntSliceVar(&newOpt.With, "with", nil, "update/fix: item numbers to include, e.g. 7,9")
 	newCmd.Flags().StringArrayVar(&newOpt.Bugs, "bug", nil, "fix: a small bug, repeatable")
 	newCmd.Flags().BoolVar(&newOpt.Dir, "dir", false, "fix: make a folder with design.md")
+	newCmd.Flags().StringVar(&newOpt.Depth, "depth", "full", "feature, issue, plan: light or full")
 
 	rootCmd.AddCommand(newCmd)
 }

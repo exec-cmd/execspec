@@ -30,7 +30,7 @@ var listCmd = &cobra.Command{
 			if it.Archived && !listAll {
 				continue
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d/%d\t%s\n", it.ID(), it.Type.Name, it.Status, it.Markers, it.Done, it.Total, it.Title)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d/%d\t%s\n", it.ID(), it.Type.Name, it.Status, len(it.Markers), it.Done, it.Total, it.Title)
 		}
 		return w.Flush()
 	},
