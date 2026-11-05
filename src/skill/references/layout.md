@@ -1,0 +1,40 @@
+# Creating spec/
+
+`xspec init` does all of this. By hand, create in the project root:
+
+```
+spec/
+  SPEC.md      the owner's main file
+  analysis/    analyses: other repositories, tools, options
+  personal/    the owner's opinions
+  notes/       notes, plus glossary.md for project slang
+  features/    numbered: new capabilities
+  issues/      numbered: large bugs and problems
+  updates/     numbered folders: a batch of features and issues
+  fixes/       numbered: a batch of issues and small bugs
+  plans/       numbered: a design before big work
+  archive/     closed items, same subfolders
+```
+
+1. Add `/spec/` as a line to `.gitignore` (create the file when missing) unless a line already ignores it. The leading slash keeps nested folders such as `src/spec` tracked.
+2. Write `spec/SPEC.md` as this stub and leave it for the owner:
+
+```markdown
+# <Project name>
+
+> The owner fills this file. Agents read it and propose edits in chat.
+
+## Goal
+
+## Scope
+
+## Principles
+
+One line each. Plans check themselves against these in their Gates section.
+
+## Decisions
+```
+
+3. Tell the owner that `SPEC.md` is theirs to write.
+
+Done when `git status` shows no `spec/` files and every folder above exists.
