@@ -2,7 +2,7 @@
 name: execspec
 description: Spec-driven development - at the start of work in a code project, read its spec/ directory or offer to create one; for a large feature, bug, batch of work or plan write a numbered spec file the owner approves before code; hunt for bugs or scout what to build next into spec/; keep research, notes and project slang in spec/.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Execspec
@@ -36,6 +36,7 @@ Done when you can name the spec files that bear on the task and what each decide
 | Several pieces of work at once | One update with a part per piece, per [references/work-cycle.md](references/work-cycle.md); several bugs at once are one fix. Never a pile of separate features. |
 | Find bugs, review the code for problems | Follow [references/bug-hunt.md](references/bug-hunt.md). |
 | What to do next, options for the next update | Follow [references/scout.md](references/scout.md). |
+| Improve or summarize any spec file | Follow [references/polish.md](references/polish.md). |
 | Analyse another repository, a tool or an option | `xspec new analysis "<title>"`: question, sources, findings, a verdict for the owner. |
 | A note, or a term with a project meaning ("sync" for a command sequence) | `xspec new note "<title>"`. Slang goes to `notes/glossary.md`, one line per term: `**term** - meaning (where it came up)`. Add a term only when its meaning is certain; otherwise ask. |
 | Change `SPEC.md` or a `personal/` file | Follow **Owner's files**. |
@@ -48,6 +49,8 @@ Done when you can name the spec files that bear on the task and what each decide
 ## Shared rules
 
 - **Approval is the owner's act.** Never run `xspec approve`, never answer a `[?: …]` marker on the owner's behalf, and never delete one you cannot answer from the code. Ask the owner to run `xspec approve <num>` (or, in an agent session, `! xspec approve <num>`).
+- **Digest before approval.** Before asking for approval, and before `xspec start`, show the owner a digest in chat, as [references/polish.md](references/polish.md) defines. Never store it in a file.
+- **Owner-written items.** When the owner wrote or edited an item by hand, read it, run `xspec check`, and fix only format problems: status line, numbering, marker syntax. Keep their wording unless they ask for an improve. `SPEC.md` and `personal/` follow **Owner's files**.
 - One fact lives in one place: intent in `spec/`, as-built in `docs/dev/`, and each links to the other rather than copying. `ROADMAP.md` is generated; never edit it.
 - `spec/` stays out of git. Never commit it or move its content into tracked files.
 - When a code change makes `docs/dev/` stale, hand it to doc-keeper for a stale check; without doc-keeper, update the affected `docs/dev/` file yourself.

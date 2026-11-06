@@ -4,7 +4,7 @@ For the kickoff, a large feature, a bug above average in size or risk, a batch o
 
 ## Items
 
-Every item has a number from one counter shared by all types (`007`), so `xspec start 7` and `--with 7,9` work. Names are `<NNN>-<slug>`.
+Every item has a number from one counter shared by all types (`007`), so `xspec start 7` and `--with 7,9` work. Names are `<NNN>-<slug>`. The owner may write any item by hand; `xspec new` still gives the number and status line, and `xspec check` verifies the result.
 
 | Type | Where | Holds |
 | --- | --- | --- |
@@ -42,8 +42,8 @@ The kickoff's Stack table says which parts the owner knows. For every choice tou
 
 ## Steps
 
-1. **Draft.** Read the code the item touches, then `xspec new <type> "<title>"` (update/fix: `--with 7,9`; fix: `--bug "text"`; `--depth light` when it fits). Fill the sections; answer the markers the code answers; leave a marker for every question only the owner can answer. In a project with code, the kickoff describes the current state as the baseline.
-2. **Approve.** Show the file, or `xspec context <num>`, and the output of `xspec questions`. The owner answers the markers and runs `xspec approve <num>`; you never run it. An update or fix approves everything it includes. Editing an approved item (ticking boxes aside) voids the approval.
+1. **Draft.** Read the code the item touches, then `xspec new <type> "<title>"` (update/fix: `--with 7,9`; fix: `--bug "text"`; `--depth light` when it fits). Fill the sections; answer the markers the code answers; leave a marker for every question only the owner can answer. In a project with code, the kickoff describes the current state as the baseline. If the owner asks to improve it, follow [polish.md](polish.md) first. Then show the digest.
+2. **Approve.** Show the digest first, then the file or `xspec context <num>`, and the output of `xspec questions`. The owner answers the markers and runs `xspec approve <num>`; you never run it. An update or fix approves everything it includes. Editing an approved item (ticking boxes aside) voids the approval.
 3. **Build.** `xspec start <num>` sets `doing` on the item and everything it includes. Write the code; tick each task box as it is done. `xspec next` names the next unchecked task.
 4. **Close.** `xspec done <num>` refuses while a box is unchecked or a Verify command fails. It writes `Change: <HEAD> <date>` (or `--change`), and moves the item, with everything it includes, into `archive/`.
 

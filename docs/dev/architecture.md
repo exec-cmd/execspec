@@ -46,7 +46,9 @@ The CLI shells out to `git` only for three reads: `rev-parse --show-toplevel` (p
 
 ## Skill
 
-`src/skill/SKILL.md` and `src/skill/references/` are the skill as shipped. Edit them there; `xspec install` copies the embedded version. Keep the skill and `src/spec/templates.go` in step: the skill describes the same format the CLI writes. The skill also has a copy in the exec.skills repository (`src/skills/coding/execspec/`); sync it on every skill change.
+`src/skill/SKILL.md` and `src/skill/references/` are the skill as shipped. Edit them there; `xspec install` copies the embedded version. Keep the skill and `src/spec/templates.go` in step: the skill describes the same format the CLI writes.
+
+`references/polish.md` holds the improve and digest rules for every spec file. The digest is never stored: a stored summary changes the item hash (`Item.hash`) and voids approval, and a file named like an item would be scanned as one (`nameRe`). The skill also has a copy in the exec.skills repository (`src/skills/coding/execspec/`); sync it on every skill change.
 
 ## Version
 

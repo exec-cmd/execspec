@@ -72,6 +72,7 @@ Verify: go test ./internal/auth/...
 - **Bug behavior** is written as three lists: what happens now, what should happen, and what must keep working (`SHALL CONTINUE TO`). The last list is the regression guard.
 - **Open questions** are `[?: …]` markers placed where the answer belongs. Templates start full of them; `approve` refuses until they are gone. Markers inside backticks or code blocks are examples.
 - **Verify** lines are commands that must pass before `done` closes the item.
+- **By hand.** Items are plain Markdown. Create one with `xspec new` for the number and status line, edit it, then run `xspec check`.
 - **Includes** reference items by number (`- [ ] 007 feature: Login form`). Included items stay in their own folders until the batch closes.
 - **Gates** in a plan take one line per principle in `SPEC.md`: kept, or broken and why.
 
@@ -89,6 +90,8 @@ In a project that already has code, the kickoff describes the current state as t
 4. **Close.** `xspec done 7` runs the Verify commands, records the commit and date, and archives the file.
 
 An update or fix runs the same cycle for everything it includes at once. `spec/ROADMAP.md` follows every step.
+
+You can ask the agent to improve or summarize any spec file. It shows a digest in chat before asking for your approval, and changes `SPEC.md` only when you say yes.
 
 ## Finding work
 
