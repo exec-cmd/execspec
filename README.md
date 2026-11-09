@@ -12,6 +12,9 @@ English · [Русский](README_RU.md)
 
 </div>
 
+> [!WARNING]
+> The project is in early development and may change significantly: commands, flags, the `spec/` file format and the agent skill can change between versions without backward compatibility. Pin a version and check the release notes before upgrading.
+
 `xspec` is a small CLI that keeps your intent next to the code: numbered changes and updates as plain Markdown in a git-ignored `spec/` folder, next to a short project brief (`SPEC.md`). You and your AI agent read and write the same files. The CLI creates them from templates, closes them with `open → done` and refuses to close while questions or tasks are still open. It ships an agent skill that teaches Claude Code, Codex and other agents the same workflow.
 
 ## Features
