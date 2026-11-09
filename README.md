@@ -12,18 +12,18 @@ English · [Русский](README_RU.md)
 
 </div>
 
-`xspec` is a small CLI that keeps your intent next to the code: numbered features, bugs, updates, fixes and plans as plain Markdown in a git-ignored `spec/` folder. You and your AI agent read and write the same files. The CLI creates them from templates, moves them through `open → doing → done` and refuses to move on while questions are still open. It ships an agent skill that teaches Claude Code, Codex and other agents the same workflow.
+`xspec` is a small CLI that keeps your intent next to the code: numbered changes and updates as plain Markdown in a git-ignored `spec/` folder, next to a short project brief (`SPEC.md`). You and your AI agent read and write the same files. The CLI creates them from templates, closes them with `open → done` and refuses to close while questions or tasks are still open. It ships an agent skill that teaches Claude Code, Codex and other agents the same workflow.
 
 ## Features
 
 - **Private by default.** `spec/` holds intent: plans, opinions, open questions. `xspec init` keeps it out of git.
-- **Numbered items.** One counter for all types: `xspec start 7`, `xspec done 7`, `--with 7,9`.
-- **Testable requirements.** Features use EARS requirements (`WHEN … THE SYSTEM SHALL …`) and tasks that name them (`(R1)`). Bugs record current, expected *and unchanged* behavior.
-- **You approve, the agent builds.** `[?: question]` markers block approval; `xspec approve` is yours alone, and any edit afterwards voids it. Unchecked tasks and failing `Verify:` commands block `done`.
-- **Right-sized specs.** A kickoff for the project, `--depth light` for small work, one update with parts when you hand over a batch.
+- **Numbered items.** One counter for both types: `xspec done 7`, `--with 7,9`.
+- **Testable requirements.** Add EARS requirements (`WHEN … THE SYSTEM SHALL …`) when behavior needs them, with tasks that name them (`(R1)`). A bug records current, expected *and unchanged* behavior.
+- **The agent works, you answer.** The agent shows a short plan in chat and starts. It stops only at an open `[?: question]` marker or an *Ask first* area of `SPEC.md`. Unchecked tasks and failing `Verify:` commands block `done`.
+- **Right-sized specs.** A one-sentence task needs no file. A *change* is one piece of work, an *update* is a batch; both start at Goal / Tasks / Verify and grow.
+- **A brief the agent drafts.** `SPEC.md` holds Context, Audience, Principles, Design, Stack and Ask first. The agent writes the draft from your repository and a few questions.
 - **Always know what is next.** `xspec next`, `xspec questions`, and a generated `ROADMAP.md` with history.
-- **Batches.** An *update* bundles features and issues, a *fix* bundles issues and small bugs. Closing the batch closes everything in it.
-- **Clean history.** `done` writes the commit into the file and moves it into `spec/archive/`.
+- **Clean history.** `done` writes the commit into the file and moves it into `spec/archive/`; `--decision` keeps one line of reasoning in `notes/decisions.md`.
 - **Agent skill included.** `xspec install global` installs it for Claude Code (`~/.claude/skills`) and other agents (`~/.agents/skills`).
 - **No LLM inside.** No keys, no network, one static binary.
 
@@ -52,15 +52,13 @@ xspec install global     # ~/.claude/skills/execspec and ~/.agents/skills/execsp
 ## Quick start
 
 ```sh
-xspec init                                  # spec/, the kickoff, a .gitignore line
-xspec new feature "Login form"              # spec/features/002-login-form.md
-xspec new issue "Crash on save"             # spec/issues/003-crash-on-save.md
-xspec new update v0.2 --with 2,3            # spec/updates/004-v0-2/{update,design}.md
+xspec init                                  # spec/, the SPEC.md brief, a .gitignore line
+xspec new change "Login form"               # spec/changes/001-login-form.md
+xspec new change "Crash on save" --bug      # spec/changes/002-crash-on-save.md
+xspec new update v0.2 --with 1,2            # spec/updates/003-v0-2.md (--dir adds design.md)
 xspec questions                             # what waits for your answer
-xspec approve 4                             # yours: refused while [?: …] markers remain
-xspec start 4
 xspec next                                  # the next task to do
-xspec done 4                                # refused while tasks are unchecked or Verify fails
+xspec done 3                                # refused while tasks are unchecked or Verify fails
 xspec check                                 # exit 1 on any problem
 ```
 
@@ -68,35 +66,29 @@ xspec check                                 # exit 1 on any problem
 
 ```text
 $ xspec list
-NUM  TYPE     STATUS  [?]  TASKS  TITLE
-002  feature  open    0    0/2    Login form
-003  issue    open    0    0/2    Crash on save
-004  update   open    0    0/1    v0.2
+NUM  TYPE    STATUS  [?]  TASKS  TITLE
+001  change  open    0    1/2    Login form
+002  change  open    0    0/2    Crash on save
+003  update  open    0    0/1    v0.2
 
-$ xspec done 4
+$ xspec done 3 --decision "sessions over JWT: simpler to revoke"
 verify: go test ./...
-004 done   v0.2 -> spec/archive/updates/004-v0-2
-002 done   Login form -> spec/archive/features/002-login-form.md
-003 done   Crash on save -> spec/archive/issues/003-crash-on-save.md
+003 done   v0.2 -> spec/archive/updates/003-v0-2.md
+001 done   Login form -> spec/archive/changes/001-login-form.md
+002 done   Crash on save -> spec/archive/changes/002-crash-on-save.md
 ```
 
-A new feature file looks like this. The agent fills it in, you approve it, and then the code gets written:
+A new change file looks like this. The agent fills it in, shows a short plan, and writes the code:
 
 ```markdown
 status: open
-# 002 Login form
+# 001 Login form
 
-## Why
-[?: the problem, and who gets what when it is solved]
-
-## Requirements
-- R1: WHEN [?: condition] THE SYSTEM SHALL [?: behavior]
-
-## Design
-[?: the approach and the code it touches]
+## Goal
+[?: what changes, and for whom]
 
 ## Tasks
-- [ ] T1 [?: task] (R1)
+- [ ] T1 [?: task]
 
 Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
 ```
@@ -106,7 +98,7 @@ Verify: [?: a command that must pass before done, e.g. go test ./...; or delete 
 | Page | What is in it |
 | --- | --- |
 | [Usage](docs/user/usage.md) | Every command and flag |
-| [Workflow](docs/user/workflow.md) | The spec layout, item types, templates and the work cycle |
+| [Workflow](docs/user/workflow.md) | The spec layout, item types, the brief and the work cycle |
 | [Architecture](docs/dev/architecture.md) | Internals for contributors and coding agents; start with [AGENTS.md](AGENTS.md) |
 
 ## Development

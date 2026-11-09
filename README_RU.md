@@ -12,18 +12,18 @@
 
 </div>
 
-`xspec` — небольшая CLI-утилита, которая держит намерения рядом с кодом. Фичи, баги, обновления, фиксы и планы получают номера и лежат обычным Markdown в папке `spec/`, которую git игнорирует. Вы и ваш ИИ-агент читаете и пишете одни и те же файлы. CLI создаёт их из шаблонов, ведёт по статусам `open → doing → done` и не пускает дальше, пока остаются открытые вопросы. В комплекте навык (skill), который учит этому процессу Claude Code, Codex и других агентов.
+`xspec` — небольшая CLI-утилита, которая держит намерения рядом с кодом. Изменения (changes) и обновления (updates) получают номера и лежат обычным Markdown в папке `spec/`, которую git игнорирует; рядом короткий бриф проекта `SPEC.md`. Вы и ваш ИИ-агент читаете и пишете одни и те же файлы. CLI создаёт их из шаблонов, закрывает `open → done` и отказывает, пока остаются открытые вопросы или невыполненные задачи. В комплекте навык для агентов: он учит Claude Code, Codex и другие агенты тому же процессу.
 
 ## Возможности
 
 - **Приватно по умолчанию.** В `spec/` лежат намерения: планы, мнения, открытые вопросы. `xspec init` убирает папку из git.
-- **Номера.** Один счётчик на все типы: `xspec start 7`, `xspec done 7`, `--with 7,9`.
-- **Проверяемые требования.** У фич требования записаны в нотации EARS (`WHEN … THE SYSTEM SHALL …`), а каждая задача ссылается на своё требование (`(R1)`). У багов три поведения: текущее, ожидаемое и *то, что не должно сломаться*.
-- **Вы одобряете, агент строит.** Метки `[?: вопрос]` не дают одобрить спеку. `xspec approve` запускаете только вы, и любая правка после него сбрасывает одобрение. Неотмеченные задачи и упавшие команды `Verify:` не дают сделать `done`.
-- **Спеки нужного размера.** Kickoff на весь проект, `--depth light` для мелкой работы, один update с частями, когда задач много сразу.
+- **Номера.** Один счётчик на оба типа: `xspec done 7`, `--with 7,9`.
+- **Проверяемые требования.** Когда поведению нужна точная формулировка, добавляйте требования в нотации EARS (`WHEN … THE SYSTEM SHALL …`) и задачи, которые на них ссылаются (`(R1)`). У бага три поведения: текущее, ожидаемое и *неизменное*.
+- **Агент работает, вы отвечаете.** Агент показывает короткий план в чате и начинает работу. Он останавливается только на открытой метке `[?: вопрос]` или в зоне *Ask first* из `SPEC.md`. Неотмеченные задачи и упавшие команды `Verify:` не дают закрыть.
+- **Спеки нужного размера.** Задача в одно предложение обходится без файла. *Change* — одна работа, *update* — пакет; оба начинаются с Goal / Tasks / Verify и растут по мере нужды.
+- **Бриф, который пишет агент.** В `SPEC.md` — Context, Audience, Principles, Design, Stack и Ask first. Агент составляет черновик по вашему репозиторию и нескольким вопросам.
 - **Всегда понятно, что дальше.** `xspec next`, `xspec questions` и генерируемый `ROADMAP.md` с историей.
-- **Пакеты.** *update* собирает фичи и issues, *fix* — issues и мелкие баги. Когда пакет закрывается, закрывается и всё, что в него входит.
-- **Чистая история.** `done` записывает в файл коммит и переносит файл в `spec/archive/`.
+- **Чистая история.** `done` записывает в файл коммит и переносит файл в `spec/archive/`; `--decision` сохраняет одну строку с причиной в `notes/decisions.md`.
 - **Навык для агентов.** `xspec install global` ставит его для Claude Code (`~/.claude/skills`) и других агентов (`~/.agents/skills`).
 - **Без LLM внутри.** Ключи и сеть не нужны, всё в одном статическом бинарнике.
 
@@ -52,15 +52,13 @@ xspec install global     # ~/.claude/skills/execspec и ~/.agents/skills/execspe
 ## Быстрый старт
 
 ```sh
-xspec init                                  # spec/, kickoff, строка в .gitignore
-xspec new feature "Login form"              # spec/features/002-login-form.md
-xspec new issue "Crash on save"             # spec/issues/003-crash-on-save.md
-xspec new update v0.2 --with 2,3            # spec/updates/004-v0-2/{update,design}.md
+xspec init                                  # spec/, бриф SPEC.md, строка в .gitignore
+xspec new change "Login form"               # spec/changes/001-login-form.md
+xspec new change "Crash on save" --bug      # spec/changes/002-crash-on-save.md
+xspec new update v0.2 --with 1,2            # spec/updates/003-v0-2.md (--dir добавит design.md)
 xspec questions                             # что ждёт вашего ответа
-xspec approve 4                             # только вы; откажет, пока есть метки [?: …]
-xspec start 4
 xspec next                                  # следующая задача
-xspec done 4                                # откажет, если задачи не отмечены или Verify упал
+xspec done 3                                # откажет, если задачи не отмечены или Verify упал
 xspec check                                 # код выхода 1 при любой проблеме
 ```
 
@@ -68,35 +66,29 @@ xspec check                                 # код выхода 1 при лю�
 
 ```text
 $ xspec list
-NUM  TYPE     STATUS  [?]  TASKS  TITLE
-002  feature  open    0    0/2    Login form
-003  issue    open    0    0/2    Crash on save
-004  update   open    0    0/1    v0.2
+NUM  TYPE    STATUS  [?]  TASKS  TITLE
+001  change  open    0    1/2    Login form
+002  change  open    0    0/2    Crash on save
+003  update  open    0    0/1    v0.2
 
-$ xspec done 4
+$ xspec done 3 --decision "sessions over JWT: simpler to revoke"
 verify: go test ./...
-004 done   v0.2 -> spec/archive/updates/004-v0-2
-002 done   Login form -> spec/archive/features/002-login-form.md
-003 done   Crash on save -> spec/archive/issues/003-crash-on-save.md
+003 done   v0.2 -> spec/archive/updates/003-v0-2.md
+001 done   Login form -> spec/archive/changes/001-login-form.md
+002 done   Crash on save -> spec/archive/changes/002-crash-on-save.md
 ```
 
-Так выглядит новый файл фичи. Агент его заполняет, вы одобряете, и только после этого пишется код:
+Так выглядит новый файл change. Агент его заполняет, показывает короткий план и пишет код:
 
 ```markdown
 status: open
-# 002 Login form
+# 001 Login form
 
-## Why
-[?: the problem, and who gets what when it is solved]
-
-## Requirements
-- R1: WHEN [?: condition] THE SYSTEM SHALL [?: behavior]
-
-## Design
-[?: the approach and the code it touches]
+## Goal
+[?: what changes, and for whom]
 
 ## Tasks
-- [ ] T1 [?: task] (R1)
+- [ ] T1 [?: task]
 
 Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
 ```
@@ -108,7 +100,7 @@ Verify: [?: a command that must pass before done, e.g. go test ./...; or delete 
 | Страница | Что там |
 | --- | --- |
 | [Usage](docs/user/usage.md) | Все команды и флаги |
-| [Workflow](docs/user/workflow.md) | Структура `spec/`, типы, шаблоны и рабочий цикл |
+| [Workflow](docs/user/workflow.md) | Структура `spec/`, типы, бриф и рабочий цикл |
 | [Architecture](docs/dev/architecture.md) | Внутреннее устройство для контрибьюторов и агентов; начните с [AGENTS.md](AGENTS.md) |
 
 ## Разработка
