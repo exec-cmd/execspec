@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 )
 
 const RoadmapFile = "ROADMAP.md"
+
+var htmlComment = regexp.MustCompile(`(?s)<!--.*?-->`)
 
 // parents maps an item number to the item that includes it, when both are on
 // the same side of the archive.
@@ -28,10 +31,10 @@ func parents(items []*Item) map[int]*Item {
 
 func roadmapLine(it *Item) string {
 	note := it.Status
-	switch {
-	case it.Changed():
-		note += ", changed since approval"
-	case len(it.Markers) > 0:
+	if it.Started() {
+		note += fmt.Sprintf(", %d/%d tasks", it.Done, it.Total)
+	}
+	if len(it.Markers) > 0 {
 		note += fmt.Sprintf(", %d questions", len(it.Markers))
 	}
 	return fmt.Sprintf("%s %s %s (%s)", it.ID(), it.Type.Name, it.Title, note)
@@ -56,16 +59,12 @@ func Roadmap(items []*Item) string {
 		case par[it.Num] != nil:
 		case it.Archived:
 			history = append(history, it)
-		case it.Status == "doing":
+		case it.Started():
 			now = append(now, it)
 		default:
 			next = append(next, it)
 		}
 	}
-	// approved before open, then by number
-	sort.SliceStable(next, func(i, j int) bool {
-		return next[i].Status == "approved" && next[j].Status != "approved"
-	})
 	sort.SliceStable(history, func(i, j int) bool {
 		if history[i].Date != history[j].Date {
 			return history[i].Date > history[j].Date
@@ -105,8 +104,9 @@ func WriteRoadmap(root string) error {
 	return os.WriteFile(filepath.Join(root, Dir, RoadmapFile), []byte(Roadmap(items)), 0o644)
 }
 
-// Next tells what to do now, first match wins: a task of the lowest doing
-// item, closing a finished item, starting an approved one, then open items.
+// Next tells what to do now, first match wins: a task of the lowest item in
+// progress, closing a finished item, answering questions, then the first task
+// of an item not yet started.
 func Next(items []*Item) string {
 	var active []*Item
 	for _, it := range items {
@@ -114,33 +114,35 @@ func Next(items []*Item) string {
 			active = append(active, it)
 		}
 	}
-	for _, it := range active {
-		if it.Status != "doing" {
-			continue
-		}
+	task := func(it *Item) string {
 		for _, line := range it.Lines {
 			if m := boxRe.FindStringSubmatch(line); m != nil && m[1] == " " && !includeRe.MatchString(line) {
 				return fmt.Sprintf("work on %s %s: %s", it.ID(), it.Title, strings.TrimSpace(line[len(m[0]):]))
 			}
 		}
+		return ""
+	}
+	for _, it := range active {
+		if it.Started() {
+			if s := task(it); s != "" {
+				return s
+			}
+		}
 	}
 	par := parents(items)
 	for _, it := range active {
-		if it.Status == "doing" && par[it.Num] == nil {
+		if it.Total > 0 && it.Done == it.Total && par[it.Num] == nil {
 			return fmt.Sprintf("close %s %s: xspec done %s", it.ID(), it.Title, it.ID())
 		}
 	}
 	for _, it := range active {
-		if it.Status == "approved" && !it.Changed() && par[it.Num] == nil {
-			return fmt.Sprintf("start %s %s: xspec start %s", it.ID(), it.Title, it.ID())
+		if len(it.Markers) > 0 {
+			return fmt.Sprintf("answer %d questions in %s %s: xspec questions", len(it.Markers), it.ID(), it.Title)
 		}
 	}
 	for _, it := range active {
-		switch {
-		case len(it.Markers) > 0:
-			return fmt.Sprintf("answer %d questions in %s %s: xspec questions", len(it.Markers), it.ID(), it.Title)
-		case it.Status == "open" || it.Changed():
-			return fmt.Sprintf("the owner reviews and approves %s %s: xspec approve %s", it.ID(), it.Title, it.ID())
+		if s := task(it); s != "" {
+			return s
 		}
 	}
 	return "nothing to do"
@@ -162,7 +164,7 @@ func Questions(root string, items []*Item) string {
 }
 
 // Context prints the brief for one item: the item, what it includes, the
-// project's principles, the kickoff stack and the glossary.
+// SPEC.md's Principles, Ask first and Stack sections, and the glossary.
 func Context(root, ref string) (string, error) {
 	items, err := Scan(root)
 	if err != nil {
@@ -198,11 +200,8 @@ func Context(root, ref string) (string, error) {
 
 	specMD := filepath.Join(root, Dir, "SPEC.md")
 	data, _ := os.ReadFile(specMD)
-	part(specMD+" § Principles", section(string(data), "Principles"))
-	for _, x := range items {
-		if x.Type.Name == "plan" && x.Slug == "kickoff" {
-			part(x.File+" § Stack", section(strings.Join(x.Lines, "\n"), "Stack"))
-		}
+	for _, name := range []string{"Principles", "Ask first", "Stack"} {
+		part(specMD+" § "+name, htmlComment.ReplaceAllString(section(string(data), name), ""))
 	}
 	file(filepath.Join(root, Dir, "notes", "glossary.md"))
 	return b.String(), nil

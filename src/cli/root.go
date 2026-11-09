@@ -14,8 +14,8 @@ var version = "dev"
 var rootCmd = &cobra.Command{
 	Use:   "xspec",
 	Short: "Spec-driven development in a private spec/ directory",
-	Long: "xspec keeps intent in a private, git-ignored spec/ directory: numbered features,\n" +
-		"issues, updates, fixes and plans that people and AI agents share as plain Markdown.",
+	Long: "xspec keeps intent in a private, git-ignored spec/ directory: numbered changes\n" +
+		"and updates that people and AI agents share as plain Markdown.",
 	SilenceUsage: true,
 	Version:      version,
 }

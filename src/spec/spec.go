@@ -17,7 +17,7 @@ const (
 )
 
 // Type is a kind of spec file. Status types are numbered and go through
-// open → doing → done; the others are free files named by slug.
+// open → done; the others are free files named by slug.
 type Type struct {
 	Name   string
 	Folder string
@@ -25,11 +25,8 @@ type Type struct {
 }
 
 var Types = []Type{
-	{"feature", "features", true},
-	{"issue", "issues", true},
+	{"change", "changes", true},
 	{"update", "updates", true},
-	{"fix", "fixes", true},
-	{"plan", "plans", true},
 	{"note", "notes", false},
 	{"analysis", "analysis", false},
 }
@@ -37,7 +34,13 @@ var Types = []Type{
 // Folders created by Init besides the type folders.
 var extraFolders = []string{"personal", Archive}
 
+// removed lists the v0.4 types and where their work goes now.
+var removed = map[string]bool{"feature": true, "issue": true, "fix": true, "plan": true}
+
 func TypeByName(name string) (Type, error) {
+	if removed[name] {
+		return Type{}, fmt.Errorf("%q is gone: use `change` for one piece of work (--bug for a bug) or `update` for a batch", name)
+	}
 	for _, t := range Types {
 		if t.Name == name {
 			return t, nil
@@ -105,17 +108,6 @@ func Init(root string) ([]string, error) {
 		created = append(created, p)
 	}
 
-	items, err := Scan(root)
-	if err != nil {
-		return created, err
-	}
-	if len(items) == 0 {
-		p := filepath.Join(root, Dir, "plans", "001-kickoff.md")
-		if err := writeNew(p, templates["kickoff"], nil); err != nil {
-			return created, err
-		}
-		created = append(created, p)
-	}
 	if _, err := os.Stat(filepath.Join(root, Dir, RoadmapFile)); os.IsNotExist(err) {
 		created = append(created, filepath.Join(root, Dir, RoadmapFile))
 	}

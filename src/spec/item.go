@@ -1,7 +1,6 @@
 package spec
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -21,13 +20,13 @@ var (
 	markerRe  = regexp.MustCompile(`\[\?:[^\]]*\]`)
 	codeRe    = regexp.MustCompile("`[^`]*`")
 	boxRe     = regexp.MustCompile(`^\s*- \[([ xX])\] `)
-	includeRe = regexp.MustCompile(`^\s*- \[([ xX])\] (\d{3,}) (feature|issue):`)
+	includeRe = regexp.MustCompile(`^\s*- \[([ xX])\] (\d{3,}) (change):`)
 	reqRe     = regexp.MustCompile(`^\s*- (R\d+):`)
 	reqRefRe  = regexp.MustCompile(`R\d+`)
 	dateRe    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 )
 
-var Statuses = []string{"open", "approved", "doing", "done"}
+var Statuses = []string{"open", "done"}
 
 // Marker is one open [?: …] question.
 type Marker struct {
@@ -45,7 +44,6 @@ type Item struct {
 	Archived bool
 
 	Status   string
-	Hash     string // content hash recorded by approve
 	Change   string // what closed it: a commit, PR or path
 	Date     string // when it was closed, YYYY-MM-DD
 	Title    string
@@ -63,25 +61,8 @@ func (it *Item) hasChangeLine() bool {
 	return len(it.Lines) > 1 && strings.HasPrefix(it.Lines[1], "Change:")
 }
 
-// Changed reports whether an approved item was edited after approval.
-func (it *Item) Changed() bool { return it.Status == "approved" && it.Hash != it.hash() }
-
-// hash covers the content without the status and Change lines and without
-// task-box state, so ticking tasks never invalidates an approval.
-func (it *Item) hash() string {
-	body := it.Lines[1:]
-	if it.hasChangeLine() {
-		body = it.Lines[2:]
-	}
-	h := sha256.New()
-	for _, line := range body {
-		if m := boxRe.FindStringSubmatchIndex(line); m != nil {
-			line = line[:m[2]] + " " + line[m[3]:]
-		}
-		fmt.Fprintln(h, line)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil))[:8]
-}
+// Started reports whether work began: an open item with a checked task.
+func (it *Item) Started() bool { return it.Status == "open" && it.Done > 0 }
 
 func (it *Item) parse() error {
 	data, err := os.ReadFile(it.File)
@@ -90,13 +71,7 @@ func (it *Item) parse() error {
 	}
 	it.Lines = strings.Split(string(data), "\n")
 	if s, ok := strings.CutPrefix(it.Lines[0], "status: "); ok {
-		f := strings.Fields(s)
-		if len(f) > 0 {
-			it.Status = f[0]
-		}
-		if len(f) > 1 {
-			it.Hash = f[1]
-		}
+		it.Status = strings.TrimSpace(s)
 	}
 	if it.hasChangeLine() {
 		f := strings.Fields(strings.TrimPrefix(it.Lines[1], "Change:"))
@@ -228,10 +203,9 @@ func Slugify(title string) string {
 
 // NewOptions are the extras for some types.
 type NewOptions struct {
-	With  []int    // update, fix: items to include
-	Bugs  []string // fix: small bugs
-	Dir   bool     // fix: make a folder with design.md
-	Depth string   // feature, issue, plan: "light" or "full" (default)
+	With []int // update: changes to include
+	Bug  bool  // change: Current / Expected / Unchanged behavior form
+	Dir  bool  // update: make a folder with design.md
 }
 
 // New writes an item from its template and returns the path created.
@@ -240,22 +214,14 @@ func New(root string, t Type, title string, opt NewOptions) (string, error) {
 	if slug == "" {
 		return "", errors.New("the title has no letters or digits")
 	}
-	if (len(opt.With) > 0 && t.Name != "update" && t.Name != "fix") ||
-		((len(opt.Bugs) > 0 || opt.Dir) && t.Name != "fix") {
-		return "", fmt.Errorf("--with is for update and fix; --bug and --dir are for fix")
+	if ((len(opt.With) > 0 || opt.Dir) && t.Name != "update") || (opt.Bug && t.Name != "change") {
+		return "", errors.New("--with and --dir are for update; --bug is for change")
 	}
 	tmpl := templates[t.Name]
-	switch opt.Depth {
-	case "", "full":
-	case "light":
-		var ok bool
-		if tmpl, ok = templates[t.Name+"/light"]; !ok {
-			return "", errors.New("--depth light is for feature, issue and plan")
-		}
-	default:
-		return "", fmt.Errorf("unknown depth %q, available: light, full", opt.Depth)
+	if opt.Bug {
+		tmpl = templates["change/bug"]
 	}
-	repl := map[string]string{"{{title}}": title, "{{includes}}": "", "{{bugs}}": ""}
+	repl := map[string]string{"{{title}}": title, "{{includes}}": ""}
 
 	if !t.Status {
 		path := filepath.Join(root, Dir, t.Folder, slug+".md")
@@ -272,7 +238,6 @@ func New(root string, t Type, title string, opt NewOptions) (string, error) {
 	}
 	repl["{{num}}"] = fmt.Sprintf("%03d", num)
 
-	allowed := map[string]bool{"feature": t.Name == "update", "issue": true}
 	for _, n := range opt.With {
 		it := byNum(items, n)
 		switch {
@@ -280,18 +245,15 @@ func New(root string, t Type, title string, opt NewOptions) (string, error) {
 			return "", fmt.Errorf("no item %03d", n)
 		case it.Archived:
 			return "", fmt.Errorf("%03d is already done and archived", n)
-		case !allowed[it.Type.Name]:
-			return "", fmt.Errorf("%03d is a %s; %s includes only %s", n, it.Type.Name, t.Name, includable(t.Name))
+		case it.Type.Name != "change":
+			return "", fmt.Errorf("%03d is an %s; an update includes only changes", n, it.Type.Name)
 		}
 		repl["{{includes}}"] += fmt.Sprintf("- [ ] %s %s: %s\n", it.ID(), it.Type.Name, it.Title)
-	}
-	for _, b := range opt.Bugs {
-		repl["{{bugs}}"] += "- [ ] " + b + "\n"
 	}
 
 	name := repl["{{num}}"] + "-" + slug
 	path := filepath.Join(root, Dir, t.Folder, name+".md")
-	if t.Name == "update" || opt.Dir {
+	if opt.Dir {
 		path = filepath.Join(root, Dir, t.Folder, name)
 		if err := writeNew(filepath.Join(path, "design.md"), templates["design"], repl); err != nil {
 			return "", err
@@ -306,18 +268,11 @@ func New(root string, t Type, title string, opt NewOptions) (string, error) {
 	return path, WriteRoadmap(root)
 }
 
-func includable(typ string) string {
-	if typ == "update" {
-		return "features and issues"
-	}
-	return "issues"
-}
-
-// Includable lists the active items an update or fix may include.
-func Includable(items []*Item, typ string) []*Item {
+// Includable lists the active changes an update may include.
+func Includable(items []*Item) []*Item {
 	var out []*Item
 	for _, it := range items {
-		if !it.Archived && (it.Type.Name == "issue" || (typ == "update" && it.Type.Name == "feature")) {
+		if !it.Archived && it.Type.Name == "change" {
 			out = append(out, it)
 		}
 	}
@@ -373,68 +328,17 @@ func markerProblems(root string, g []*Item) []string {
 	return problems
 }
 
-// Approve records the owner's approval on the item and everything it
-// includes. It refuses while any of them has [?: …] markers.
-func Approve(root, ref string) ([]*Item, error) {
-	g, err := group(root, ref)
-	if err != nil {
-		return nil, err
-	}
-	problems := markerProblems(root, g)
-	for _, x := range g {
-		if x.Status != "open" && x.Status != "approved" {
-			problems = append(problems, fmt.Sprintf("%s is %s; only open items are approved", x.ID(), x.Status))
-		}
-	}
-	if len(problems) > 0 {
-		return nil, gateError("cannot approve", problems)
-	}
-	for _, x := range g {
-		if err := x.write("approved "+x.hash(), ""); err != nil {
-			return nil, err
-		}
-	}
-	return g, WriteRoadmap(root)
-}
-
-// Start sets doing on the item and everything it includes. Each must be
-// approved and unchanged since, or already doing.
-func Start(root, ref string) ([]*Item, error) {
-	g, err := group(root, ref)
-	if err != nil {
-		return nil, err
-	}
-	problems := markerProblems(root, g)
-	for _, x := range g {
-		switch {
-		case x.Status == "doing":
-		case x.Status != "approved":
-			problems = append(problems, fmt.Sprintf("%s is %s; the owner approves it with `xspec approve %s`", x.ID(), x.Status, x.ID()))
-		case x.Changed():
-			problems = append(problems, fmt.Sprintf("%s changed after approval; the owner re-approves it with `xspec approve %s`", x.ID(), x.ID()))
-		}
-	}
-	if len(problems) > 0 {
-		return nil, gateError("cannot start", problems)
-	}
-	for _, x := range g {
-		if err := x.write("doing", ""); err != nil {
-			return nil, err
-		}
-	}
-	return g, WriteRoadmap(root)
-}
-
 // DoneOptions control how Done closes an item.
 type DoneOptions struct {
 	Change   string                 // what closed it; default: git HEAD
+	Decision string                 // optional line for notes/decisions.md
 	NoVerify bool                   // skip Verify commands
 	Run      func(cmd string) error // runs one Verify command in root
 }
 
 // Done closes the item and everything it includes, then moves them to the
-// archive. It refuses on open markers, unchecked task boxes, an item that was
-// never approved, or a failing Verify command.
+// archive. It refuses on open markers, unchecked task boxes or a failing
+// Verify command.
 func Done(root, ref string, opt DoneOptions) ([]*Item, error) {
 	g, err := group(root, ref)
 	if err != nil {
@@ -442,9 +346,6 @@ func Done(root, ref string, opt DoneOptions) ([]*Item, error) {
 	}
 	problems := markerProblems(root, g)
 	for _, x := range g {
-		if x.Status != "doing" && x.Status != "approved" {
-			problems = append(problems, fmt.Sprintf("%s is %s; approve and start it first", x.ID(), x.Status))
-		}
 		if x.Done < x.Total {
 			problems = append(problems, fmt.Sprintf("%s has %d of %d boxes unchecked (%s)", x.ID(), x.Total-x.Done, x.Total, short(root, x.File)))
 		}
@@ -474,7 +375,13 @@ func Done(root, ref string, opt DoneOptions) ([]*Item, error) {
 			change = strings.TrimSpace(string(out))
 		}
 	}
-	change = strings.TrimSpace(change + " " + time.Now().Format("2006-01-02"))
+	today := time.Now().Format("2006-01-02")
+	change = strings.TrimSpace(change + " " + today)
+	if d := strings.Join(strings.Fields(opt.Decision), " "); d != "" {
+		if err := appendDecision(root, g[0], d, today); err != nil {
+			return nil, err
+		}
+	}
 	for i, line := range g[0].Lines {
 		if includeRe.MatchString(line) {
 			g[0].Lines[i] = strings.Replace(line, "- [ ] ", "- [x] ", 1)
@@ -497,6 +404,25 @@ func Done(root, ref string, opt DoneOptions) ([]*Item, error) {
 		x.Path, x.Archived = dst, true
 	}
 	return g, WriteRoadmap(root)
+}
+
+// appendDecision adds one line to notes/decisions.md, creating the file.
+func appendDecision(root string, it *Item, text, date string) error {
+	p := filepath.Join(root, Dir, "notes", "decisions.md")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	line := fmt.Sprintf("- %s %s (%s): %s\n", it.ID(), it.Title, date, text)
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		line = "# Decisions\n\nOne line per closed item: what was chosen and why.\n\n" + line
+	}
+	f, err := os.OpenFile(p, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(line)
+	return err
 }
 
 // Shell runs a Verify command in dir with the terminal attached.
@@ -524,7 +450,7 @@ func (it *Item) write(status, change string) error {
 			it.Lines = append(it.Lines[:1], append([]string{"Change: " + change}, it.Lines[1:]...)...)
 		}
 	}
-	it.Status, it.Hash, _ = strings.Cut(status, " ")
+	it.Status = status
 	return os.WriteFile(it.File, []byte(strings.Join(it.Lines, "\n")), 0o644)
 }
 

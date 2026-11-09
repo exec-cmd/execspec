@@ -1,21 +1,33 @@
 package spec
 
-// Placeholders: {{num}}, {{title}}, {{includes}}, {{bugs}}.
-// Every [?: …] marker blocks `xspec start` until someone answers it.
+// Placeholders: {{num}}, {{title}}, {{includes}}.
+// Every [?: …] marker stops `xspec done` until someone answers it.
 
 const specStub = `# %s
 
-> The owner fills this file. Agents read it and propose edits in chat.
+<!-- Project brief. Fill every section with a few lines; the agent drafts it from the repository and asks you a few questions. -->
 
-## Goal
+## Context
+<!-- What the project is and why it exists. -->
 
-## Scope
+## Audience
+<!-- Who uses it. -->
 
 ## Principles
+<!-- One line each: the rules every change follows. -->
 
-One line each. Plans check themselves against these in their Gates section.
+## Design
+<!-- How it is built in a few lines, or a link to the design doc. -->
 
-## Decisions
+## Stack
+<!-- Part | Choice | Owner knows it (yes or no); the agent explains the parts you do not know. -->
+
+## Ask first
+The agent stops and asks before it does any of these:
+- add a dependency
+- change a file format or a public interface
+- migrate or delete data
+- touch secrets, CI or release configuration
 `
 
 const glossaryStub = `# Glossary
@@ -24,24 +36,19 @@ Project slang, one line per term: **term** - meaning (where it came up)
 `
 
 var templates = map[string]string{
-	"feature": `status: open
+	"change": `status: open
 # {{num}} {{title}}
 
-## Why
-[?: the problem, and who gets what when it is solved]
-
-## Requirements
-- R1: WHEN [?: condition] THE SYSTEM SHALL [?: behavior]
-
-## Design
-[?: the approach and the code it touches]
+## Goal
+[?: what changes, and for whom]
 
 ## Tasks
-- [ ] T1 [?: task] (R1)
+- [ ] T1 [?: task]
+
 Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
 `,
 
-	"issue": `status: open
+	"change/bug": `status: open
 # {{num}} {{title}}
 
 ## Current behavior
@@ -53,12 +60,10 @@ Verify: [?: a command that must pass before done, e.g. go test ./...; or delete 
 ## Unchanged behavior
 - WHEN [?: condition] THEN the system SHALL CONTINUE TO [?: behavior that must not break]
 
-## Cause
-[?: root cause, once found]
-
 ## Tasks
 - [ ] T1 regression test reproduces the bug
 - [ ] T2 [?: fix]
+
 Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
 `,
 
@@ -74,112 +79,11 @@ Verify: [?: a command that must pass before done, e.g. go test ./...; or delete 
 
 ### P1 [?: part name]
 [?: why this part]
-- R1: WHEN [?: condition] THE SYSTEM SHALL [?: behavior]
-
-## Also changes
-Migrations, config, dependencies outside the parts.
-
-## Tasks
-- [ ] T1 [?: task] (R1)
-
-Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
-
-## Risks
-What may break, and how to roll back.
-`,
-
-	"fix": `status: open
-# {{num}} {{title}}
-
-## Includes
-{{includes}}
-## Small bugs
-{{bugs}}
-## Tasks
-- [ ] T1 a regression test for every bug above
-Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
-`,
-
-	"plan": `status: open
-# {{num}} {{title}}
-
-## Context
-[?: what prompted this, and the constraints]
-
-## Gates
-One line per principle in SPEC.md: kept, or broken and why.
-
-## Decision
-[?: the chosen approach]
-
-## Steps
-- [ ] [?: step; name the items it creates, e.g. 007]
-`,
-
-	"feature/light": `status: open
-# {{num}} {{title}}
-
-## Goal
-[?: what changes, and for whom]
 
 ## Tasks
 - [ ] T1 [?: task]
-`,
 
-	"issue/light": `status: open
-# {{num}} {{title}}
-
-## Current behavior
-- WHEN [?: condition] THEN the system [?: wrong behavior]
-
-## Expected behavior
-- WHEN [?: condition] THEN the system SHALL [?: correct behavior]
-
-## Tasks
-- [ ] T1 [?: fix]
-`,
-
-	"plan/light": `status: open
-# {{num}} {{title}}
-
-## Context
-[?: what prompted this]
-
-## Decision
-[?: the chosen approach]
-
-## Steps
-- [ ] [?: step]
-`,
-
-	// Written by init into plans/001-kickoff.md.
-	"kickoff": `status: open
-# 001 Kickoff
-
-In a project that already has code, describe the current state as the baseline.
-
-## Vision
-[?: what it is, for whom, and why now]
-
-## MVP
-- R1: WHEN [?: condition] THE SYSTEM SHALL [?: behavior]
-
-## Out of scope
-[?: what this project will not do]
-
-## Stack
-| Part | Choice | Owner knows it |
-| --- | --- | --- |
-| [?: language] | [?: choice] | [?: yes or no] |
-
-## Architecture sketch
-[?: the main parts and how they connect]
-
-## Milestones
-- v0.1: [?: the first usable version]
-
-## Tasks
-- [ ] T1 [?: the project skeleton builds and runs] (R1)
+Verify: [?: a command that must pass before done, e.g. go test ./...; or delete this line]
 `,
 
 	"analysis": `# {{title}}
@@ -196,7 +100,7 @@ In a project that already has code, describe the current state as the baseline.
 	"note": `# {{title}}
 `,
 
-	// design.md beside update.md, and fix.md with --dir.
+	// design.md beside update.md, with --dir.
 	"design": `# Design: {{title}}
 `,
 }

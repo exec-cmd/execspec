@@ -27,17 +27,13 @@ func Check(root string) ([]string, error) {
 
 		switch {
 		case !slices.Contains(Statuses, it.Status):
-			add("line 1 must be `status: open|approved|doing|done`")
-		case it.Status == "approved" && it.Hash == "":
-			add("approved without a hash; the owner approves it with `xspec approve %s`", it.ID())
-		case it.Changed():
-			add("changed after approval; the owner re-approves it with `xspec approve %s`", it.ID())
+			add("line 1 must be `status: open` or `status: done`")
 		case it.Status == "done" && !it.Archived:
 			add("done but not archived; close it with `xspec done %s`", it.ID())
 		case it.Status != "done" && it.Archived:
 			add("archived but status is %s", it.Status)
-		case it.Status == "doing" && len(it.Markers) > 0:
-			add("doing with %d open [?: …] markers", len(it.Markers))
+		case it.Started() && len(it.Markers) > 0:
+			add("work began with %d open [?: …] markers; ask the owner and answer them", len(it.Markers))
 		}
 		for _, n := range it.Includes {
 			if byNum(items, n) == nil {
